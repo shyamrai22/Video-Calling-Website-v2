@@ -76,7 +76,7 @@ const VideoPage = () => {
         formData.append("image", blob);
 
         // Send frame to the server for emotion detection
-        fetch(`https://your-server-url/detect_emotion`, {
+        fetch(`https://dima806-huggingface.onrender.com`, {
           method: "POST",
           body: formData,
         })
