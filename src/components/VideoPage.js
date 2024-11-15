@@ -7,8 +7,8 @@ const VideoPage = () => {
   const { id } = useParams();
   const roomID = id;
   const myCallContainerRef = useRef(null);
-  const canvasRef = useRef(null);
   const [emotionData, setEmotionData] = useState(null);
+  const [cameraId, setCameraId] = useState(null);  // Add state for cameraId
 
   useEffect(() => {
     const initMeeting = async () => {
@@ -24,7 +24,6 @@ const VideoPage = () => {
           "guest"
         );
 
-        // Create instance object from Kit Token
         const zp = ZegoUIKitPrebuilt.create(kitToken);
 
         if (zp && typeof zp.joinRoom === "function") {
@@ -45,7 +44,13 @@ const VideoPage = () => {
             scenario: {
               mode: ZegoUIKitPrebuilt.OneONoneCall,
             },
+            onRoomUserUpdate: (updateType, userList) => {
+              // Handle users joining or leaving the room
+            },
           });
+
+          // Set a unique camera ID based on room or user
+          setCameraId(roomID); // or any unique identifier per user
 
           // Capture frames every 3 seconds for emotion detection
           setInterval(captureFrame, 3000);
@@ -60,18 +65,18 @@ const VideoPage = () => {
     const captureFrame = async () => {
       const videoElement = myCallContainerRef.current.querySelector("video");
       if (videoElement) {
-        const canvas = canvasRef.current;
+        const canvas = document.createElement("canvas");
         canvas.width = videoElement.videoWidth;
         canvas.height = videoElement.videoHeight;
         const context = canvas.getContext("2d");
         context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-        // Convert canvas to blob and send to backend
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg"));
         const formData = new FormData();
         formData.append("image", blob);
 
-        fetch("https://dima806-huggingface.onrender.com/detect_emotion", {
+        // Send frame to the server for emotion detection
+        fetch(`https://your-server-url/detect_emotion`, {
           method: "POST",
           body: formData,
         })
@@ -92,11 +97,7 @@ const VideoPage = () => {
 
   return (
     <div className="relative w-full h-screen bg-gray-100">
-      <div
-        ref={myCallContainerRef}
-        className="absolute top-0 left-0 w-full h-full"
-      ></div>
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <div ref={myCallContainerRef} className="absolute top-0 left-0 w-full h-full"></div>
 
       {emotionData && (
         <div className="absolute top-4 left-4 bg-white p-4 rounded shadow-lg">
