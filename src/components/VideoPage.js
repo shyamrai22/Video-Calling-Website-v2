@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 import { APP_ID, SERVER_SECRET } from "./constant";
@@ -8,6 +8,7 @@ const VideoPage = () => {
   const roomID = id;
   const myCallContainerRef = useRef(null);
   const canvasRef = useRef(null);
+  const [emotionData, setEmotionData] = useState(null);
 
   useEffect(() => {
     const initMeeting = async () => {
@@ -20,20 +21,13 @@ const VideoPage = () => {
           serverSecret,
           roomID,
           Date.now().toString(),
-          "lalit"
+          "guest"
         );
-
-        // Log kitToken for debugging
-        console.log("kitToken:", kitToken);
 
         // Create instance object from Kit Token
         const zp = ZegoUIKitPrebuilt.create(kitToken);
 
-        // Log zp object for debugging
-        console.log("ZegoUIKitPrebuilt instance:", zp);
-
         if (zp && typeof zp.joinRoom === "function") {
-          // Start the call
           zp.joinRoom({
             container: myCallContainerRef.current,
             sharedLinks: [
@@ -52,13 +46,11 @@ const VideoPage = () => {
               mode: ZegoUIKitPrebuilt.OneONoneCall,
             },
           });
-          
-          // Capture frames every 5 seconds
-          setInterval(captureFrame, 5000);
+
+          // Capture frames every 3 seconds for emotion detection
+          setInterval(captureFrame, 3000);
         } else {
-          console.error(
-            "joinRoom method is not available on ZegoUIKitPrebuilt instance."
-          );
+          console.error("joinRoom method is not available on ZegoUIKitPrebuilt instance.");
         }
       } catch (error) {
         console.error("Error initializing meeting:", error);
@@ -79,13 +71,13 @@ const VideoPage = () => {
         const formData = new FormData();
         formData.append("image", blob);
 
-        fetch("https://dima806-huggingface.onrender.com", { // Change to deployed URL when ready
+        fetch("https://dima806-huggingface.onrender.com/detect_emotion", {
           method: "POST",
           body: formData,
         })
           .then((response) => response.json())
           .then((data) => {
-            console.log("Emotion detection result:", data);
+            setEmotionData(data);
           })
           .catch((error) => {
             console.error("Error detecting emotion:", error);
@@ -99,11 +91,25 @@ const VideoPage = () => {
   }, [roomID]);
 
   return (
-    <div
-      className="flex items-center justify-center w-full h-screen bg-gray-100"
-      ref={myCallContainerRef}
-    >
+    <div className="relative w-full h-screen bg-gray-100">
+      <div
+        ref={myCallContainerRef}
+        className="absolute top-0 left-0 w-full h-full"
+      ></div>
       <canvas ref={canvasRef} style={{ display: "none" }} />
+
+      {emotionData && (
+        <div className="absolute top-4 left-4 bg-white p-4 rounded shadow-lg">
+          <h3 className="text-lg font-bold">Emotion Prediction</h3>
+          <ul>
+            {emotionData.map((emotion, index) => (
+              <li key={index} className="text-sm">
+                {emotion.label}: {Math.round(emotion.score * 100)}%
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
