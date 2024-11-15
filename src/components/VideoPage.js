@@ -79,7 +79,7 @@ const VideoPage = () => {
         const formData = new FormData();
         formData.append("image", blob);
 
-        fetch("http://localhost:5000/detect_emotion", { // Change to deployed URL when ready
+        fetch("https://dima806-huggingface.onrender.com", { // Change to deployed URL when ready
           method: "POST",
           body: formData,
         })
