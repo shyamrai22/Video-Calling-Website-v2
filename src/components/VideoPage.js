@@ -7,6 +7,7 @@ const VideoPage = () => {
   const { id } = useParams();
   const roomID = id;
   const myCallContainerRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const initMeeting = async () => {
@@ -51,6 +52,9 @@ const VideoPage = () => {
               mode: ZegoUIKitPrebuilt.OneONoneCall,
             },
           });
+          
+          // Capture frames every 5 seconds
+          setInterval(captureFrame, 5000);
         } else {
           console.error(
             "joinRoom method is not available on ZegoUIKitPrebuilt instance."
@@ -58,6 +62,34 @@ const VideoPage = () => {
         }
       } catch (error) {
         console.error("Error initializing meeting:", error);
+      }
+    };
+
+    const captureFrame = async () => {
+      const videoElement = myCallContainerRef.current.querySelector("video");
+      if (videoElement) {
+        const canvas = canvasRef.current;
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+        const context = canvas.getContext("2d");
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+        // Convert canvas to blob and send to backend
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg"));
+        const formData = new FormData();
+        formData.append("image", blob);
+
+        fetch("http://localhost:5000/detect_emotion", { // Change to deployed URL when ready
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Emotion detection result:", data);
+          })
+          .catch((error) => {
+            console.error("Error detecting emotion:", error);
+          });
       }
     };
 
@@ -70,7 +102,9 @@ const VideoPage = () => {
     <div
       className="flex items-center justify-center w-full h-screen bg-gray-100"
       ref={myCallContainerRef}
-    ></div>
+    >
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+    </div>
   );
 };
 
